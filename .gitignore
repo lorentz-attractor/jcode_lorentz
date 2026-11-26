@@ -20,3 +20,38 @@ captures/
 /*.avif
 /*.mp4
 /*.png
+
+# ---------------------------------------------------------------------------
+# [jcode_lorentz] Arquivos sensiveis e pessoais. Nunca commitar.
+# Secao propria do fork, mantida no fim do arquivo para evitar conflitos
+# ao fazer merge do upstream.
+# ---------------------------------------------------------------------------
+# Credenciais e tokens do jcode (normalmente ficam em ~/.jcode, fora do repo)
+auth.json
+auth.bak
+auth-refresh-state.json
+auth-refresh-state.bak
+*_oauth_usage.json
+/config.toml
+/config.toml.bak*
+
+# Variaveis de ambiente e segredos
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+secrets/
+.secrets/
+
+# Chaves e certificados
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Customizacoes locais que nao devem ir para o GitHub
+/local/
+*.local.toml
