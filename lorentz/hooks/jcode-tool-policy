@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  jcode_lorentz :: pre_tool gate (camada do AGENTE)
+# =============================================================================
+#  Roda antes de cada chamada de ferramenta do jcode. Bloqueia (exit 2) comandos
+#  bash que tentem escrever no repositorio central do jcode (1jehuang/jcode):
+#    - git push para upstream ou URL do 1jehuang
+#    - gh com escrita no 1jehuang (pr/issue/release/repo edit/workflow, api -X ...)
+#  Leituras (gh run list, gh pr view, gh api GET...) continuam liberadas.
+#
+#  Ativado em ~/.jcode/config.toml:
+#    [hooks]
+#    pre_tool = "~/Projetos/jcode/lorentz/hooks/jcode-tool-policy"
+# =============================================================================
+input="$(cat)"
+[ "${JCODE_HOOK_TOOL_NAME:-}" = "bash" ] || exit 0
+
+if command -v jq >/dev/null 2>&1; then
+  cmd="$(printf '%s' "$input" | jq -r '.command // empty' 2>/dev/null)"
+  [ -n "$cmd" ] || cmd="$input"
+else
+  cmd="$input"
+fi
+lc="$(printf '%s' "$cmd" | tr '[:upper:]' '[:lower:]')"
+
+deny() {
+  echo "BLOQUEADO pela trava do jcode_lorentz: $1. O repositorio central 1jehuang/jcode e somente leitura. Use o fork (origin = lorentz-attractor/jcode_lorentz)." >&2
+  exit 2
+}
+
+# git push para o upstream ou para qualquer URL do 1jehuang
+if grep -qE '(^|[^a-z0-9_-])git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*)?)*[[:space:]]+push([[:space:]]|$)' <<<"$lc"; then
+  grep -qE '1jehuang' <<<"$lc" && deny "git push com destino 1jehuang"
+  grep -qE 'push([[:space:]]+-[^[:space:]]+)*[[:space:]]+upstream([[:space:]]|$)' <<<"$lc" && deny "git push para o remote upstream"
+  grep -qE 'pushurl|pushinsteadof|core\.hookspath' <<<"$lc" && deny "tentativa de contornar as travas de push"
+fi
+
+# mexer nas travas em si
+if grep -qE 'git[[:space:]]+config.*(remote\.upstream\.pushurl|pushinsteadof|core\.hookspath)' <<<"$lc" \
+   && ! grep -qE 'git[[:space:]]+config[[:space:]]+(--global[[:space:]]+)?(--get|--get-all|--get-regexp|-l|--list)' <<<"$lc"; then
+  deny "alteracao das travas de push (pushurl/pushInsteadOf/hooksPath)"
+fi
+if grep -qE 'git[[:space:]]+remote[[:space:]]+set-url.*upstream' <<<"$lc"; then
+  deny "alteracao da URL do remote upstream"
+fi
+
+# gh com escrita no 1jehuang
+if grep -qE '(^|[^a-z0-9_-])gh[[:space:]]' <<<"$lc" && grep -qE '1jehuang' <<<"$lc"; then
+  if grep -qE 'gh[[:space:]]+api' <<<"$lc"; then
+    grep -qE '(-x|--method)[[:space:]=]*(post|put|patch|delete)|[[:space:]](-f|-f|--field|--raw-field|--input)[[:space:]]' <<<"$lc" \
+      && deny "gh api com escrita no 1jehuang"
+  elif grep -qE 'gh[[:space:]]+(pr|issue)[[:space:]]+(create|merge|close|reopen|comment|edit|review|ready|lock|delete|transfer)' <<<"$lc" \
+    || grep -qE 'gh[[:space:]]+(release|label|secret|variable|ruleset)[[:space:]]+(create|edit|delete|upload|set|clone)' <<<"$lc" \
+    || grep -qE 'gh[[:space:]]+repo[[:space:]]+(edit|delete|rename|archive|sync|deploy-key)' <<<"$lc" \
+    || grep -qE 'gh[[:space:]]+(workflow|run)[[:space:]]+(run|enable|disable|cancel|rerun|delete)' <<<"$lc" \
+    || grep -qE 'gh[[:space:]]+cache[[:space:]]+delete' <<<"$lc"; then
+    deny "gh com escrita no 1jehuang"
+  fi
+fi
+exit 0

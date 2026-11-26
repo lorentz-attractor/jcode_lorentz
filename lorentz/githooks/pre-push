@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  jcode_lorentz :: TRAVA DE SEGURANCA DE PUSH
+# =============================================================================
+#  Este hook impede QUALQUER push para o repositorio central do jcode
+#  (github.com/1jehuang/jcode), nao importa o nome do remote, o protocolo
+#  (https/ssh/git) ou a forma como o comando foi digitado.
+#
+#  Regras:
+#    1. URL contendo "1jehuang/jcode"  -> BLOQUEADO SEMPRE (sem override).
+#    2. Remote chamado "upstream"       -> BLOQUEADO SEMPRE (sem override).
+#    3. URL fora de "lorentz-attractor/" -> bloqueado, a menos que
+#       LORENTZ_ALLOW_FOREIGN_PUSH=1 esteja definido (para outros repos seus).
+#
+#  Instalado por: lorentz/setup.sh  (git config core.hooksPath lorentz/githooks)
+# =============================================================================
+set -u
+remote_name="${1:-}"
+remote_url="${2:-}"
+lc_url="$(printf '%s' "$remote_url" | tr '[:upper:]' '[:lower:]')"
+
+block() {
+  {
+    echo
+    echo "############################################################"
+    echo "##  PUSH BLOQUEADO PELA TRAVA DE SEGURANCA DO jcode_lorentz"
+    echo "##"
+    echo "##  remote: ${remote_name}"
+    echo "##  url:    ${remote_url}"
+    echo "##"
+    echo "##  motivo: $1"
+    echo "##"
+    echo "##  Para contribuir com o jcode original, faca push no SEU fork"
+    echo "##  (origin) e abra um Pull Request pelo GitHub."
+    echo "############################################################"
+    echo
+  } >&2
+  exit 1
+}
+
+case "$lc_url" in
+  *1jehuang/jcode*) block "destino e o repositorio CENTRAL do jcode (1jehuang/jcode)." ;;
+esac
+
+if [ "$remote_name" = "upstream" ]; then
+  block "o remote 'upstream' e somente leitura neste fork."
+fi
+
+case "$lc_url" in
+  *lorentz-attractor/*) ;;
+  *)
+    if [ "${LORENTZ_ALLOW_FOREIGN_PUSH:-0}" != "1" ]; then
+      block "destino fora de lorentz-attractor/. Use LORENTZ_ALLOW_FOREIGN_PUSH=1 se for intencional."
+    fi
+    ;;
+esac
+
+exit 0
