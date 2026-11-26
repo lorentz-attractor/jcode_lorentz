@@ -1,0 +1,49 @@
+# jcode_lorentz :: CI enxuto do fork (somente Linux).
+# Os workflows pesados do upstream ficam desativados no fork via lorentz/ci-trim.sh.
+name: Lorentz CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, lorentz, "lorentz/**"]
+  pull_request:
+    branches: [master, lorentz]
+
+concurrency:
+  group: lorentz-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTUP_TOOLCHAIN: stable
+
+jobs:
+  guards:
+    name: Travas de seguranca do fork
+    if: github.repository == 'lorentz-attractor/jcode_lorentz'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testar travas (pre-push + pre_tool)
+        run: bash lorentz/test-guards.sh
+
+  check:
+    name: fmt + check (Linux)
+    if: github.repository == 'lorentz-attractor/jcode_lorentz'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: lorentz-ubuntu
+      - name: Install mold linker
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mold
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+      - name: cargo check
+        run: cargo check --locked --all-targets
