@@ -74,12 +74,16 @@ Versoes antigas ficam em `~/.jcode/builds/versions/` para rollback.
 
 ## Notas
 
-### Providers (Anthropic + Together AI)
+### Providers (Anthropic + DeepInfra)
 
 - A conta Anthropic atual e **OAuth de assinatura** (Claude). Ela nao funciona
   atras de um gateway como o Bifrost, que precisa de **API key** do console.
   Manter a assinatura direto no jcode.
-- O jcode ja tem Together nativo: `jcode login --provider together`.
+- Provider secundario escolhido: **DeepInfra** (perfil nativo `deepinfra`,
+  chave em `~/.config/jcode/deepinfra.env`, fora do repo).
+- Para o swarm usar um modelo DeepInfra, o nome precisa do prefixo do perfil,
+  por exemplo `deepinfra:deepseek-ai/DeepSeek-V4-Pro`, e entrar igualzinho no
+  `swarm_model_allowlist`.
 - Gateway proprio (Bifrost, LiteLLM...): declarar como provider nomeado:
 
   ```toml
